@@ -1,0 +1,35 @@
+# API Framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# HTTP Client
+httpx==0.27.0
+aiohttp==3.9.5
+
+# AWS
+boto3==1.34.100
+botocore==1.34.100
+
+# Okta SDK
+okta==2.9.7
+
+# ML / Anomaly Detection
+scikit-learn==1.4.2
+numpy==1.26.4
+pandas==2.2.2
+
+# Utilities
+python-dotenv==1.0.1
+python-dateutil==2.9.0
+pytz==2024.1
+
+# Testing
+pytest==8.2.0
+pytest-asyncio==0.23.6
+httpx==0.27.0
+
+# Dev
+black==24.4.2
+ruff==0.4.4
