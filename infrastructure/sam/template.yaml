@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Zero Trust Security Dashboard — API Backend
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Environment:
+      Variables:
+        APP_ENV: production
+        LOG_LEVEL: INFO
+
+Parameters:
+  OktaDomain:
+    Type: String
+    Description: Your Okta domain e.g. https://dev-xxxxx.okta.com
+  OktaApiToken:
+    Type: String
+    NoEcho: true
+    Description: Okta API token (stored securely, not logged)
+  DynamoDBTableName:
+    Type: String
+    Default: zero-trust-events
+
+Resources:
+
+  # -----------------------------------------------------------------------
+  # DynamoDB table for event storage
+  # -----------------------------------------------------------------------
+  EventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoDBTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: event_id
+          AttributeType: S
+        - AttributeName: published
+          AttributeType: S
+      KeySchema:
+        - AttributeName: event_id
+          KeyType: HASH
+        - AttributeName: published
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # -----------------------------------------------------------------------
+  # Lambda function — FastAPI via Mangum
+  # -----------------------------------------------------------------------
+  ZeroTrustApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: zero-trust-dashboard-api
+      CodeUri: backend/
+      Handler: app.main.handler
+      Description: Zero Trust Dashboard FastAPI backend
+      Environment:
+        Variables:
+          OKTA_DOMAIN: !Ref OktaDomain
+          OKTA_API_TOKEN: !Ref OktaApiToken
+          DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
+          AWS_REGION_NAME: !Ref AWS::Region
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTableName
+      Events:
+        ApiRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref ZeroTrustApi
+        ApiProxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref ZeroTrustApi
+
+  # -----------------------------------------------------------------------
+  # API Gateway
+  # -----------------------------------------------------------------------
+  ZeroTrustApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: zero-trust-dashboard-api
+      StageName: prod
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ZeroTrustApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  FunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt ZeroTrustApiFunction.Arn
