@@ -11,7 +11,8 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.core.config import get_settings
-from app.api import events, users, risk, health
+from app.api import events, users, risk, health, webhooks
+from app.services.dynamodb_service import DynamoDBService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,6 +22,15 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting Zero Trust Dashboard API [{settings.app_env}]")
+
+    # Initialize DynamoDB table on startup
+    if settings.aws_access_key_id and settings.aws_access_key_id != "your_access_key_here":
+        db = DynamoDBService()
+        await db.ensure_table_exists()
+        logger.info("DynamoDB initialized")
+    else:
+        logger.warning("AWS credentials not configured — DynamoDB storage disabled")
+
     yield
     logger.info("Shutting down Zero Trust Dashboard API")
 
@@ -28,36 +38,37 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Zero Trust Security Dashboard",
     description="""
-    Real-time security monitoring dashboard powered by Okta's APIs.
-    
-    Features:
-    - Live authentication event stream from Okta System Log
-    - User risk scoring and anomaly detection  
-    - MFA adoption and compliance metrics
-    - Zero Trust policy simulation
+Real-time security monitoring dashboard powered by Okta APIs.
+
+Features:
+- Live authentication event stream from Okta System Log
+- DynamoDB-backed event storage with 90-day retention
+- Real-time event ingestion via Okta Event Hooks
+- User risk scoring and anomaly detection
+- MFA adoption and compliance metrics
+- Zero Trust policy simulation
     """,
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# CORS — allow React frontend to call the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",       # React dev server
-        "http://localhost:5173",       # Vite dev server
-        "https://*.cloudfront.net",    # CloudFront (production)
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://*.cloudfront.net",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Register routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(events.router, prefix="/api/v1", tags=["Events"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(risk.router, prefix="/api/v1", tags=["Risk"])
+app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
 
 
 @app.exception_handler(Exception)
@@ -69,9 +80,8 @@ async def global_exception_handler(request, exc):
     )
 
 
-# Lambda handler — Mangum wraps FastAPI for AWS Lambda + API Gateway
 try:
     from mangum import Mangum
     handler = Mangum(app, lifespan="off")
 except ImportError:
-    handler = None  # Running locally without Mangum
+    handler = None
