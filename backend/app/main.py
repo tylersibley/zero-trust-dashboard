@@ -1,7 +1,6 @@
 """
 Zero Trust Dashboard — FastAPI Application
-------------------------------------------
-Main entry point for both local development and AWS Lambda.
+Week 4: Added ML anomaly detection router
 """
 
 from fastapi import FastAPI
@@ -11,7 +10,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.core.config import get_settings
-from app.api import events, users, risk, health, webhooks
+from app.api import events, users, risk, health, webhooks, ml
 from app.services.dynamodb_service import DynamoDBService
 
 logging.basicConfig(level=logging.INFO)
@@ -22,15 +21,12 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting Zero Trust Dashboard API [{settings.app_env}]")
-
-    # Initialize DynamoDB table on startup
     if settings.aws_access_key_id and settings.aws_access_key_id != "your_access_key_here":
         db = DynamoDBService()
         await db.ensure_table_exists()
         logger.info("DynamoDB initialized")
     else:
         logger.warning("AWS credentials not configured — DynamoDB storage disabled")
-
     yield
     logger.info("Shutting down Zero Trust Dashboard API")
 
@@ -44,11 +40,11 @@ Features:
 - Live authentication event stream from Okta System Log
 - DynamoDB-backed event storage with 90-day retention
 - Real-time event ingestion via Okta Event Hooks
-- User risk scoring and anomaly detection
-- MFA adoption and compliance metrics
+- ML anomaly detection using Isolation Forest (scikit-learn)
+- User risk scoring and behavioral baselines
 - Zero Trust policy simulation
     """,
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -69,6 +65,7 @@ app.include_router(events.router, prefix="/api/v1", tags=["Events"])
 app.include_router(users.router, prefix="/api/v1", tags=["Users"])
 app.include_router(risk.router, prefix="/api/v1", tags=["Risk"])
 app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
+app.include_router(ml.router, prefix="/api/v1", tags=["ML Anomaly Detection"])
 
 
 @app.exception_handler(Exception)
