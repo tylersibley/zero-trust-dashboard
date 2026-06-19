@@ -1,14 +1,12 @@
 """
-Zero Trust Dashboard — FastAPI Application
-Week 4: Added ML anomaly detection router
+Zero Trust Dashboard – FastAPI Application
 """
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
-
+import os
 from app.core.config import get_settings
 from app.api import events, users, risk, health, webhooks, ml
 from app.services.dynamodb_service import DynamoDBService
@@ -16,7 +14,6 @@ from app.services.dynamodb_service import DynamoDBService
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,10 +23,9 @@ async def lifespan(app: FastAPI):
         await db.ensure_table_exists()
         logger.info("DynamoDB initialized")
     else:
-        logger.warning("AWS credentials not configured — DynamoDB storage disabled")
+        logger.warning("AWS credentials not configured – DynamoDB storage disabled")
     yield
     logger.info("Shutting down Zero Trust Dashboard API")
-
 
 app = FastAPI(
     title="Zero Trust Security Dashboard",
@@ -48,13 +44,22 @@ Features:
     lifespan=lifespan,
 )
 
+# Build CORS origins list from env var + defaults
+default_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://*.vercel.app",
+    "https://zero-trust-dashboard-sooty.vercel.app",
+    "https://tylersibley.dev",
+]
+extra = os.environ.get("ALLOWED_ORIGINS", "")
+if extra:
+    default_origins.extend([o.strip() for o in extra.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://*.cloudfront.net",
-    ],
+    allow_origins=default_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,7 +72,6 @@ app.include_router(risk.router, prefix="/api/v1", tags=["Risk"])
 app.include_router(webhooks.router, prefix="/api/v1", tags=["Webhooks"])
 app.include_router(ml.router, prefix="/api/v1", tags=["ML Anomaly Detection"])
 
-
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
@@ -75,7 +79,6 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={"detail": "Internal server error", "type": type(exc).__name__},
     )
-
 
 try:
     from mangum import Mangum
