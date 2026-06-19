@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+const isProd = import.meta.env.PROD;
+const BASE_URL = isProd
+  ? 'https://x3z999sfec.execute-api.us-east-1.amazonaws.com/api/v1'
+  : 'http://127.0.0.1:8000/api/v1';
+
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api/v1',
-  timeout: 10000,
+  baseURL: BASE_URL,
+  timeout: 30000,
 });
 
 export const fetchSummary = () => api.get('/events/summary');
