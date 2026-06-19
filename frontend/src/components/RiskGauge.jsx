@@ -7,7 +7,7 @@ export default function RiskGauge({ score }) {
     'var(--risk-critical)';
   const label = pct < 30 ? 'LOW' : pct < 60 ? 'MEDIUM' : pct < 80 ? 'HIGH' : 'CRITICAL';
 
-  const r = 54, cx = 70, cy = 70;
+  const r = 54, cx = 80, cy = 80;
   const startAngle = Math.PI;
   const endAngle = startAngle + (pct / 100) * Math.PI;
   const x1 = cx + r * Math.cos(startAngle);
@@ -29,16 +29,16 @@ export default function RiskGauge({ score }) {
       <div style={{
         fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
         color: 'var(--text-muted)', textTransform: 'uppercase',
-        marginBottom: 12, alignSelf: 'flex-start',
+        marginBottom: 8, alignSelf: 'flex-start',
       }}>Org Risk Score</div>
-      <svg width={140} height={80} viewBox="0 0 140 80">
+      <svg width={160} height={100} viewBox="0 0 160 100">
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
           fill="none" stroke="var(--border)" strokeWidth={8} strokeLinecap="round" />
         {pct > 0 && (
           <path d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
             fill="none" stroke={color} strokeWidth={8} strokeLinecap="round" />
         )}
-        <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--text-primary)"
+        <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text-primary)"
           fontSize={22} fontWeight={700} fontFamily="JetBrains Mono, monospace">
           {Math.round(pct)}
         </text>
