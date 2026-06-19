@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import UserDrilldown from './pages/UserDrilldown';
 import LiveFeed from './pages/LiveFeed';
+import RiskSimulator from './pages/RiskSimulator';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/users"         element={<UserDrilldown />} />
           <Route path="/users/:userId" element={<UserDrilldown />} />
           <Route path="/live-feed"     element={<LiveFeed />} />
+          <Route path="/simulate"      element={<RiskSimulator />} />
         </Routes>
       </Layout>
     </BrowserRouter>
