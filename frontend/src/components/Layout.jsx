@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Activity, Shield, FlaskConical, Brain } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, Shield, FlaskConical, Brain, BarChart2 } from 'lucide-react';
 
 const nav = [
   { to: '/',           icon: LayoutDashboard, label: 'Overview'   },
@@ -7,6 +7,7 @@ const nav = [
   { to: '/live-feed',  icon: Activity,        label: 'Live Feed'  },
   { to: '/simulate',   icon: FlaskConical,    label: 'Simulator'  },
   { to: '/anomalies',  icon: Brain,           label: 'Anomalies'  },
+  { to: '/analytics',  icon: BarChart2,       label: 'Analytics'  },
 ];
 
 export default function Layout({ children }) {
