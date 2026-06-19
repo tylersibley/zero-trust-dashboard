@@ -4,6 +4,7 @@ import Overview from './pages/Overview';
 import UserDrilldown from './pages/UserDrilldown';
 import LiveFeed from './pages/LiveFeed';
 import RiskSimulator from './pages/RiskSimulator';
+import AnomalyDetection from './pages/AnomalyDetection';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/users/:userId" element={<UserDrilldown />} />
           <Route path="/live-feed"     element={<LiveFeed />} />
           <Route path="/simulate"      element={<RiskSimulator />} />
+          <Route path="/anomalies"     element={<AnomalyDetection />} />
         </Routes>
       </Layout>
     </BrowserRouter>
