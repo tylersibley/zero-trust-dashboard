@@ -1,124 +1,135 @@
 # Zero Trust Security Dashboard
 
-A full-stack security monitoring dashboard built on Okta's APIs, demonstrating Zero Trust architecture principles including real-time authentication event monitoring, risk scoring, anomaly detection, and adaptive access policy simulation.
+A full-stack security operations dashboard built on Okta's identity platform, demonstrating Zero Trust architecture principles through real-time threat detection, behavioral analytics, and ML-powered anomaly detection.
+
+**Live data from a real Okta org** — not mocked or simulated.
+
+---
+
+## What It Does
+
+Traditional security models trust users by default once inside the network. Zero Trust assumes breach: every access request is verified continuously, not just at login.
+
+This dashboard operationalizes that model by pulling identity telemetry from Okta's APIs, scoring user risk in real time, and surfacing anomalies using machine learning — the same architecture used in enterprise SIEM and UEBA tools.
+
+---
+
+## Features
+
+### Overview
+- Org-wide risk gauge derived from live event distribution
+- 24-hour event volume and high-risk event count
+- MFA adoption rate with compliance threshold alerting
+- At-risk user table with one-click investigation
+
+### User Drilldown
+- Per-user behavioral baseline (typical login hour, known IPs, failure rate)
+- Risk score and risk level from ML scoring engine
+- MFA enrollment status and enrolled factors
+- Identity metadata pulled directly from Okta Users API
+
+### Live Feed
+- Real-time Okta System Log event stream
+- Severity classification by event type (HIGH / MED / LOW)
+- Auto-refreshes every 30 seconds
+- Color-coded by risk level
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        React Frontend                           │
-│         (Dashboard UI, Charts, Risk Alerts, User Views)         │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    AWS API Gateway                              │
-└──────────┬──────────────────┬──────────────────┬───────────────┘
-           │                  │                  │
-           ▼                  ▼                  ▼
-    ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-    │   /events   │   │   /users    │   │    /risk    │
-    │   Lambda    │   │   Lambda    │   │   Lambda    │
-    └──────┬──────┘   └──────┬──────┘   └──────┬──────┘
-           │                  │                  │
-           └──────────────────┼──────────────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │     DynamoDB      │
-                    │  (Event Storage)  │
-                    └─────────┬─────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-    │  Okta System │  │  Okta Users  │  │  Okta Event  │
-    │   Log API    │  │     API      │  │    Hooks     │
-    └──────────────┘  └──────────────┘  └──────────────┘
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   React Frontend │────▶│   FastAPI Backend     │────▶│   Okta APIs     │
+│   (Vite)        │     │   (AWS Lambda)        │     │   System Log    │
+│                 │     │                       │     │   Users API     │
+│  - Overview     │     │  - Risk Scoring       │     │   Event Hooks   │
+│  - Drilldown    │     │  - ML Anomaly Det.    │     └─────────────────┘
+│  - Live Feed    │     │  - Policy Simulator   │
+└─────────────────┘     │                       │     ┌─────────────────┐
+                        │                       │────▶│   AWS DynamoDB  │
+                        └──────────────────────┘     │   Event Storage │
+                                                      └─────────────────┘
 ```
 
-## Tech Stack
+**Backend:** Python / FastAPI / Mangum (AWS Lambda adapter)  
+**ML:** scikit-learn Isolation Forest for unsupervised anomaly detection  
+**Storage:** AWS DynamoDB for event persistence  
+**Identity:** Okta System Log API, Users API, Event Hooks (real-time webhooks)  
+**Frontend:** React / Vite / recharts / react-router-dom  
 
-| Layer | Technology |
-|---|---|
-| Frontend | React, Tailwind CSS, Recharts |
-| Backend | Python, FastAPI, AWS Lambda |
-| Database | AWS DynamoDB |
-| Identity | Okta APIs (System Log, Users, Event Hooks) |
-| Infrastructure | AWS API Gateway, S3, CloudFront, Terraform |
-| CI/CD | GitHub Actions |
-| ML | scikit-learn (anomaly detection) |
+---
 
-## Features
+## ML Anomaly Detection
 
-- **Real-time auth event monitoring** — Live stream of all Okta authentication events
-- **Risk scoring engine** — ML-based anomaly detection flagging unusual login behavior
-- **User security profiles** — Per-user auth history, risk trends, device/location tracking
-- **Zero Trust policy simulator** — Simulate adaptive access decisions based on context
-- **Compliance dashboard** — MFA adoption, inactive privileged accounts, policy violations
-- **Slack alerting** — Real-time notifications for high-risk events *(stretch goal)*
+The Isolation Forest model builds a behavioral baseline per user from historical Okta events:
 
-## Project Structure
+- **Login hour distribution** — flags logins outside typical window
+- **IP reputation** — surfaces new or unknown source IPs
+- **Failure rate** — tracks authentication failure patterns over time
+- **Event frequency** — detects spikes inconsistent with baseline behavior
 
-```
-zero-trust-dashboard/
-├── backend/
-│   ├── app/
-│   │   ├── api/          # FastAPI route handlers
-│   │   ├── core/         # Config, auth, utilities
-│   │   ├── models/       # Pydantic data models
-│   │   └── services/     # Okta API clients, DynamoDB, ML
-│   └── tests/
-├── frontend/
-│   └── src/
-│       ├── components/   # Reusable UI components
-│       ├── pages/        # Dashboard, Users, Risk, Policy
-│       ├── hooks/        # Custom React hooks
-│       └── utils/        # API calls, formatters
-├── infrastructure/
-│   ├── terraform/        # AWS infrastructure as code
-│   └── sam/              # AWS SAM for Lambda deployment
-└── docs/                 # Architecture diagrams, writeups
-```
+Anomaly scores feed directly into the risk scoring engine, which classifies users as LOW / MEDIUM / HIGH / CRITICAL.
 
-## Getting Started
+---
 
-See [SETUP.md](docs/SETUP.md) for full setup instructions.
+## API Endpoints
 
-### Quick Start
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/events/summary` | 24h event counts, MFA adoption, risk distribution |
+| GET | `/api/v1/events` | Paginated Okta system log events |
+| GET | `/api/v1/users/at-risk` | Users with elevated risk scores |
+| GET | `/api/v1/ml/baseline/{user_id}` | Behavioral baseline for a specific user |
+| POST | `/api/v1/risk/simulate` | Simulate a Zero Trust policy decision |
+| GET | `/api/v1/users` | All users with risk scores |
+
+Full Swagger UI available at `/docs` when running locally.
+
+---
+
+## Running Locally
+
+**Prerequisites:** Python 3.9+, Node 18+, Okta Developer account, AWS account
 
 ```bash
-# Clone the repo
-git clone https://github.com/yourusername/zero-trust-dashboard
-
-# Backend setup
+# Backend
 cd backend
 python -m venv venv
-source venv/bin/activate
+source venv/Scripts/activate  # Windows: . .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env  # Add your Okta credentials
 
-# Run locally
-uvicorn app.main:app --reload
+# Add your credentials to .env
+cp .env.example .env
 
-# Frontend setup (separate terminal)
-cd frontend
-npm install
-npm start
+uvicorn app.main:app --reload --port 8000
 ```
 
-## Roadmap
+```bash
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
 
-- [x] Week 1: Okta API integration & event polling
-- [ ] Week 2: FastAPI backend + AWS Lambda deployment
-- [ ] Week 3: DynamoDB event storage + Event Hooks
-- [ ] Week 4: Anomaly detection & risk scoring
-- [ ] Week 5-6: React frontend + visualizations
-- [ ] Week 7: Zero Trust policy simulator
-- [ ] Week 8: CI/CD pipeline + production polish
-- [ ] Week 9: Documentation + portfolio writeup
-- [ ] Week 10: Stretch goals (Slack alerts, SageMaker)
+Open `http://localhost:5173`
 
-## Portfolio Context
+---
 
-Built to demonstrate enterprise identity and security architecture skills relevant to TAM, Solutions Engineer, and Solutions Architect roles. Leverages hands-on Okta API experience gained during a Customer Success internship at Okta.
+## Build Log
+
+| Week | Deliverable |
+|------|-------------|
+| 1 | Okta API client, System Log ingestion, user profiles, MFA detection |
+| 2 | FastAPI backend, 11 REST endpoints, risk scoring engine, Zero Trust policy simulator |
+| 3 | DynamoDB event storage, Okta Event Hooks for real-time webhook ingestion |
+| 4 | scikit-learn Isolation Forest ML model, per-user behavioral baselines |
+| 5 | React frontend — Overview, User Drilldown, Live Feed — wired to live API |
+
+---
+
+## About
+
+Built by [Tyler Sibley](https://tylersibley.dev) — IT student at Florida State University, Okta Certified Professional, AWS Cloud Practitioner.
+
+This project was built to develop hands-on depth in identity security and Zero Trust architecture — the technical foundation of modern enterprise security programs.
