@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const isProd = import.meta.env.PROD;
 const BASE_URL = isProd
-  ? 'https://q9vvikuldi.execute-api.us-east-1.amazonaws.com/api/v1'
+  ? 'https://j2nbh6vdz8.execute-api.us-east-1.amazonaws.com/api/v1'
   : 'http://127.0.0.1:8000/api/v1';
 
 const api = axios.create({
