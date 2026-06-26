@@ -2,7 +2,12 @@
 
 A full-stack security operations dashboard built on Okta's identity platform, demonstrating Zero Trust architecture principles through real-time threat detection, behavioral analytics, and ML-powered anomaly detection.
 
+**Live demo:** [zerotrust.tylersibley.dev](https://zerotrust.tylersibley.dev)  
 **Live data from a real Okta org** — not mocked or simulated.
+
+---
+
+![Dashboard Overview](docs/zeroTrustDashboard.jpg)
 
 ---
 
@@ -23,16 +28,44 @@ This dashboard operationalizes that model by pulling identity telemetry from Okt
 - At-risk user table with one-click investigation
 
 ### User Drilldown
+![User Drilldown](docs/zeroTrustUsers.jpg)
+
 - Per-user behavioral baseline (typical login hour, known IPs, failure rate)
 - Risk score and risk level from ML scoring engine
 - MFA enrollment status and enrolled factors
 - Identity metadata pulled directly from Okta Users API
 
 ### Live Feed
+![Live Feed](docs/zeroTrustLiveFeed.jpg)
+
 - Real-time Okta System Log event stream
 - Severity classification by event type (HIGH / MED / LOW)
 - Auto-refreshes every 30 seconds
 - Color-coded by risk level
+
+### Risk Simulator
+![Risk Simulator](docs/zeroTrustSimulator.jpg)
+
+- Simulate Zero Trust policy decisions for any user and action
+- Pass optional context: IP address, country, resource
+- Returns ALLOW / CHALLENGE / DENY with full reasoning
+- Simulation history log
+
+### Anomaly Detection
+![Anomaly Detection](docs/zeroTrustAnomalies.jpg)
+
+- Isolation Forest ML model trained on per-user behavioral baselines
+- Score events against baseline — flags deviations in login hour, IP, failure rate
+- Shows anomalous features and baseline comparison
+- Re-trainable on demand
+
+### Analytics
+![Analytics](docs/zeroTrustAnalytics.jpg)
+
+- Risk score bar chart across all users
+- Risk level distribution donut chart
+- Multi-factor security posture radar chart
+- Live from `/api/v1/risk/scores`
 
 ---
 
@@ -41,15 +74,15 @@ This dashboard operationalizes that model by pulling identity telemetry from Okt
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
 │   React Frontend │────▶│   FastAPI Backend     │────▶│   Okta APIs     │
-│   (Vite)        │     │   (AWS Lambda)        │     │   System Log    │
+│   (Vite/Vercel) │     │   (AWS Lambda)        │     │   System Log    │
 │                 │     │                       │     │   Users API     │
 │  - Overview     │     │  - Risk Scoring       │     │   Event Hooks   │
 │  - Drilldown    │     │  - ML Anomaly Det.    │     └─────────────────┘
 │  - Live Feed    │     │  - Policy Simulator   │
-└─────────────────┘     │                       │     ┌─────────────────┐
-                        │                       │────▶│   AWS DynamoDB  │
-                        └──────────────────────┘     │   Event Storage │
-                                                      └─────────────────┘
+│  - Simulator    │     │                       │     ┌─────────────────┐
+│  - Anomalies    │     │                       │────▶│   AWS DynamoDB  │
+│  - Analytics    │     └──────────────────────┘     │   Event Storage │
+└─────────────────┘                                   └─────────────────┘
 ```
 
 **Backend:** Python / FastAPI / Mangum (AWS Lambda adapter)  
@@ -57,6 +90,7 @@ This dashboard operationalizes that model by pulling identity telemetry from Okt
 **Storage:** AWS DynamoDB for event persistence  
 **Identity:** Okta System Log API, Users API, Event Hooks (real-time webhooks)  
 **Frontend:** React / Vite / recharts / react-router-dom  
+**Hosting:** Vercel (frontend) + AWS Lambda + API Gateway (backend)
 
 ---
 
@@ -82,7 +116,7 @@ Anomaly scores feed directly into the risk scoring engine, which classifies user
 | GET | `/api/v1/users/at-risk` | Users with elevated risk scores |
 | GET | `/api/v1/ml/baseline/{user_id}` | Behavioral baseline for a specific user |
 | POST | `/api/v1/risk/simulate` | Simulate a Zero Trust policy decision |
-| GET | `/api/v1/users` | All users with risk scores |
+| GET | `/api/v1/risk/scores` | Risk scores for all active users |
 
 Full Swagger UI available at `/docs` when running locally.
 
@@ -90,18 +124,15 @@ Full Swagger UI available at `/docs` when running locally.
 
 ## Running Locally
 
-**Prerequisites:** Python 3.9+, Node 18+, Okta Developer account, AWS account
+**Prerequisites:** Python 3.11, Node 18+, Okta Developer account, AWS account
 
 ```bash
 # Backend
 cd backend
 python -m venv venv
-source venv/Scripts/activate  # Windows: . .\venv\Scripts\Activate.ps1
+. .\venv\Scripts\Activate.ps1  # Windows
 pip install -r requirements.txt
-
-# Add your credentials to .env
-cp .env.example .env
-
+cp .env.example .env           # Add your credentials
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -125,6 +156,9 @@ Open `http://localhost:5173`
 | 3 | DynamoDB event storage, Okta Event Hooks for real-time webhook ingestion |
 | 4 | scikit-learn Isolation Forest ML model, per-user behavioral baselines |
 | 5 | React frontend — Overview, User Drilldown, Live Feed — wired to live API |
+| 6 | Risk Simulator UI, Anomaly Detection UI, GitHub + README |
+| 7 | Analytics page with risk score charts and security posture visualization |
+| 8 | Production deployment — AWS Lambda + API Gateway + Vercel + custom domain |
 
 ---
 
