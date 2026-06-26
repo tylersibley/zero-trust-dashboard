@@ -94,6 +94,12 @@ This dashboard operationalizes that model by pulling identity telemetry from Okt
 
 ---
 
+## Deployment Notes
+
+The production frontend is deployed on Vercel and proxies all API requests through Vercel's edge network to the AWS Lambda backend. This eliminates browser CORS restrictions and reduces latency.
+
+---
+
 ## ML Anomaly Detection
 
 The Isolation Forest model builds a behavioral baseline per user from historical Okta events:
@@ -160,6 +166,14 @@ Open `http://localhost:5173`
 | 7 | Analytics page with risk score charts and security posture visualization |
 | 8 | Production deployment — AWS Lambda + API Gateway + Vercel + custom domain; resolved API Gateway CORS for cross-origin POST requests |
 
+
+---
+
+## Roadmap
+
+- **Authentication** — Okta sign-in widget protecting the dashboard (ironic that a Zero Trust dashboard has no auth)
+- **Session expiry** — automatic logout after idle period
+- **NHI Monitor** — Non-Human Identity security scanner for OAuth-connected apps
 
 ---
 
