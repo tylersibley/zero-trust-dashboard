@@ -52,7 +52,7 @@ This dashboard operationalizes that model by pulling identity telemetry from Okt
 - Simulation history log
 
 ### Anomaly Detection
-![Anomaly Detection](docs/zeroTrustAnomalies.jpg)
+![Anomaly Detection](docs/zeroTrustAnomolies.jpg)
 
 - Isolation Forest ML model trained on per-user behavioral baselines
 - Score events against baseline — flags deviations in login hour, IP, failure rate
