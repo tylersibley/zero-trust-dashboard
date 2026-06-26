@@ -44,23 +44,10 @@ Features:
     lifespan=lifespan,
 )
 
-# Build CORS origins list from env var + defaults
-default_origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://*.vercel.app",
-    "https://zero-trust-dashboard-sooty.vercel.app",
-    "https://tylersibley.dev",
-]
-extra = os.environ.get("ALLOWED_ORIGINS", "")
-if extra:
-    default_origins.extend([o.strip() for o in extra.split(",") if o.strip()])
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=default_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
