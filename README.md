@@ -158,12 +158,13 @@ Open `http://localhost:5173`
 | 5 | React frontend — Overview, User Drilldown, Live Feed — wired to live API |
 | 6 | Risk Simulator UI, Anomaly Detection UI, GitHub + README |
 | 7 | Analytics page with risk score charts and security posture visualization |
-| 8 | Production deployment — AWS Lambda + API Gateway + Vercel + custom domain |
+| 8 | Production deployment — AWS Lambda + API Gateway + Vercel + custom domain; resolved API Gateway CORS for cross-origin POST requests |
+
 
 ---
 
 ## About
 
-Built by [Tyler Sibley](https://tylersibley.dev) — IT student at Florida State University, Okta Certified Professional, AWS Cloud Practitioner.
+Built by [Tyler Sibley](https://tylersibley.dev) — Customer Success Intern at Okta, IT student at Florida State University (graduating Spring 2027), Okta Certified Professional, AWS Cloud Practitioner.
 
-This project was built to develop hands-on depth in identity security and Zero Trust architecture — the technical foundation of modern enterprise security programs.
+This project was built during my Okta internship to develop hands-on depth in identity security and Zero Trust architecture — the technical foundation of modern enterprise security programs.
