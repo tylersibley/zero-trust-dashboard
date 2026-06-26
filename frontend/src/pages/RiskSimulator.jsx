@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { simulateRisk } from '../api/client';
+import api from '../api/client';
 import { fetchAtRiskUsers } from '../api/client';
 import { useEffect } from 'react';
 import { ShieldCheck, ShieldAlert, ShieldX, Play, RotateCcw } from 'lucide-react';
@@ -9,10 +9,10 @@ const ACTIONS = ['login', 'access_resource', 'admin_action', 'mfa_challenge', 'p
 const decisionStyle = (decision) => {
   if (!decision) return {};
   switch (decision.toUpperCase()) {
-    case 'ALLOW':   return { color: 'var(--risk-low)',      icon: ShieldCheck, label: 'ALLOW' };
+    case 'ALLOW':     return { color: 'var(--risk-low)',    icon: ShieldCheck, label: 'ALLOW' };
     case 'CHALLENGE': return { color: 'var(--risk-medium)', icon: ShieldAlert, label: 'CHALLENGE' };
-    case 'DENY':    return { color: 'var(--risk-high)',     icon: ShieldX,     label: 'DENY' };
-    default:        return { color: 'var(--text-muted)',    icon: ShieldCheck, label: decision };
+    case 'DENY':      return { color: 'var(--risk-high)',   icon: ShieldX,     label: 'DENY' };
+    default:          return { color: 'var(--text-muted)',  icon: ShieldCheck, label: decision };
   }
 };
 
@@ -44,11 +44,13 @@ export default function RiskSimulator() {
     setLoading(true);
     setResult(null);
     try {
-      const context = {};
-      if (ipAddress) context.ip_address = ipAddress;
-      if (country)   context.country    = country;
+      // Match the exact PolicySimulationRequest schema
+      const payload = { user_id: userId };
+      if (ipAddress) payload.ip_address = ipAddress;
+      if (country)   payload.location_country = country;
+      payload.resource = action;
 
-      const res = await simulateRisk({ user_id: userId, action, context });
+      const res = await api.post('/risk/simulate', payload);
       const data = res.data;
       setResult(data);
 
@@ -61,7 +63,7 @@ export default function RiskSimulator() {
         ts: new Date(),
       }, ...prev].slice(0, 10));
     } catch (e) {
-      setResult({ error: e.message });
+      setResult({ error: e.response?.data?.detail || e.message });
     } finally {
       setLoading(false);
     }
@@ -78,15 +80,10 @@ export default function RiskSimulator() {
     padding: '9px 12px', width: '100%', outline: 'none',
     fontFamily: 'var(--font-ui)',
   };
-
-  const inputStyle = {
-    ...selectStyle,
-    fontFamily: 'var(--font-mono)', fontSize: 12,
-  };
+  const inputStyle = { ...selectStyle, fontFamily: 'var(--font-mono)', fontSize: 12 };
 
   return (
     <div>
-      {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Risk Simulator</h1>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
@@ -95,15 +92,12 @@ export default function RiskSimulator() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 16 }}>
-
-        {/* Left: Controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '20px 24px' }}>
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 16 }}>
               Simulation Parameters
             </div>
 
-            {/* User */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>User</label>
               <select value={userId} onChange={e => setUserId(e.target.value)} style={selectStyle}>
@@ -113,36 +107,25 @@ export default function RiskSimulator() {
               </select>
             </div>
 
-            {/* Action */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Action</label>
+              <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Action / Resource</label>
               <select value={action} onChange={e => setAction(e.target.value)} style={selectStyle}>
                 {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
 
-            {/* Optional context */}
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10, marginTop: 4 }}>
               Context (optional)
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>IP Address</label>
-              <input
-                type="text" placeholder="e.g. 192.168.1.1"
-                value={ipAddress} onChange={e => setIpAddress(e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" placeholder="e.g. 192.168.1.1" value={ipAddress} onChange={e => setIpAddress(e.target.value)} style={inputStyle} />
             </div>
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Country</label>
-              <input
-                type="text" placeholder="e.g. US, CN, RU"
-                value={country} onChange={e => setCountry(e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" placeholder="e.g. US, CN, RU" value={country} onChange={e => setCountry(e.target.value)} style={inputStyle} />
             </div>
 
-            {/* Buttons */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={handleSimulate} disabled={loading || !userId} style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -150,7 +133,6 @@ export default function RiskSimulator() {
                 color: loading ? 'var(--text-muted)' : '#000',
                 border: 'none', borderRadius: 6, padding: '10px 0',
                 fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'opacity 0.15s',
               }}>
                 <Play size={13} />
                 {loading ? 'Simulating…' : 'Run Simulation'}
@@ -165,7 +147,6 @@ export default function RiskSimulator() {
             </div>
           </div>
 
-          {/* History */}
           {history.length > 0 && (
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
@@ -190,7 +171,6 @@ export default function RiskSimulator() {
           )}
         </div>
 
-        {/* Right: Result */}
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '28px 32px' }}>
           {!result ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300, gap: 12 }}>
@@ -202,24 +182,16 @@ export default function RiskSimulator() {
             <div style={{ color: 'var(--risk-high)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>{result.error}</div>
           ) : (
             <div>
-              {/* Decision */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32, paddingBottom: 28, borderBottom: '1px solid var(--border)' }}>
-                <div style={{
-                  width: 64, height: 64, borderRadius: 16,
-                  background: ds.color + '18', border: `2px solid ${ds.color}44`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
+                <div style={{ width: 64, height: 64, borderRadius: 16, background: ds.color + '18', border: `2px solid ${ds.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <DecisionIcon size={28} color={ds.color} />
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Policy Decision</div>
-                  <div style={{ fontSize: 36, fontFamily: 'var(--font-mono)', fontWeight: 800, color: ds.color, letterSpacing: '0.04em' }}>
-                    {result.decision}
-                  </div>
+                  <div style={{ fontSize: 36, fontFamily: 'var(--font-mono)', fontWeight: 800, color: ds.color, letterSpacing: '0.04em' }}>{result.decision}</div>
                 </div>
               </div>
 
-              {/* Risk score bar */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Risk Score</span>
@@ -228,15 +200,10 @@ export default function RiskSimulator() {
                   </span>
                 </div>
                 <div style={{ height: 8, background: 'var(--bg-raised)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{
-                    height: '100%', width: `${result.risk_score}%`,
-                    background: riskBarColor(result.risk_score),
-                    borderRadius: 4, transition: 'width 0.6s ease',
-                  }} />
+                  <div style={{ height: '100%', width: `${result.risk_score}%`, background: riskBarColor(result.risk_score), borderRadius: 4, transition: 'width 0.6s ease' }} />
                 </div>
               </div>
 
-              {/* Reasoning */}
               {result.reasoning && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Reasoning</div>
@@ -246,7 +213,6 @@ export default function RiskSimulator() {
                 </div>
               )}
 
-              {/* Recommended action */}
               {result.recommended_action && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Recommended Action</div>
@@ -256,18 +222,12 @@ export default function RiskSimulator() {
                 </div>
               )}
 
-              {/* Factors evaluated */}
               {result.factors_evaluated?.length > 0 && (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Factors Evaluated</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {result.factors_evaluated.map((f, i) => (
-                      <div key={i} style={{
-                        fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
-                        padding: '8px 12px', background: 'var(--bg-raised)',
-                        borderRadius: 5, border: '1px solid var(--border)',
-                        borderLeft: `3px solid ${ds.color}`,
-                      }}>
+                      <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', padding: '8px 12px', background: 'var(--bg-raised)', borderRadius: 5, border: '1px solid var(--border)', borderLeft: `3px solid ${ds.color}` }}>
                         {f}
                       </div>
                     ))}
